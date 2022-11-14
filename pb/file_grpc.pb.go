@@ -24,6 +24,8 @@ const _ = grpc.SupportPackageIsVersion7
 type FilseServiseClient interface {
 	ListFiles(ctx context.Context, in *ListFilesRequest, opts ...grpc.CallOption) (*ListFilesResponse, error)
 	Download(ctx context.Context, in *DownloadRequest, opts ...grpc.CallOption) (FilseServise_DownloadClient, error)
+	Upload(ctx context.Context, opts ...grpc.CallOption) (FilseServise_UploadClient, error)
+	UploadAndNotifyProgress(ctx context.Context, opts ...grpc.CallOption) (FilseServise_UploadAndNotifyProgressClient, error)
 }
 
 type filseServiseClient struct {
@@ -75,12 +77,79 @@ func (x *filseServiseDownloadClient) Recv() (*DownloadResponse, error) {
 	return m, nil
 }
 
+func (c *filseServiseClient) Upload(ctx context.Context, opts ...grpc.CallOption) (FilseServise_UploadClient, error) {
+	stream, err := c.cc.NewStream(ctx, &FilseServise_ServiceDesc.Streams[1], "/file.FilseServise/Upload", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &filseServiseUploadClient{stream}
+	return x, nil
+}
+
+type FilseServise_UploadClient interface {
+	Send(*UploadRequest) error
+	CloseAndRecv() (*UploadResponse, error)
+	grpc.ClientStream
+}
+
+type filseServiseUploadClient struct {
+	grpc.ClientStream
+}
+
+func (x *filseServiseUploadClient) Send(m *UploadRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *filseServiseUploadClient) CloseAndRecv() (*UploadResponse, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(UploadResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *filseServiseClient) UploadAndNotifyProgress(ctx context.Context, opts ...grpc.CallOption) (FilseServise_UploadAndNotifyProgressClient, error) {
+	stream, err := c.cc.NewStream(ctx, &FilseServise_ServiceDesc.Streams[2], "/file.FilseServise/UploadAndNotifyProgress", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &filseServiseUploadAndNotifyProgressClient{stream}
+	return x, nil
+}
+
+type FilseServise_UploadAndNotifyProgressClient interface {
+	Send(*UploadAndNotifyProgressRequest) error
+	Recv() (*UploadAndNotifyProgressResponse, error)
+	grpc.ClientStream
+}
+
+type filseServiseUploadAndNotifyProgressClient struct {
+	grpc.ClientStream
+}
+
+func (x *filseServiseUploadAndNotifyProgressClient) Send(m *UploadAndNotifyProgressRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *filseServiseUploadAndNotifyProgressClient) Recv() (*UploadAndNotifyProgressResponse, error) {
+	m := new(UploadAndNotifyProgressResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // FilseServiseServer is the server API for FilseServise service.
 // All implementations must embed UnimplementedFilseServiseServer
 // for forward compatibility
 type FilseServiseServer interface {
 	ListFiles(context.Context, *ListFilesRequest) (*ListFilesResponse, error)
 	Download(*DownloadRequest, FilseServise_DownloadServer) error
+	Upload(FilseServise_UploadServer) error
+	UploadAndNotifyProgress(FilseServise_UploadAndNotifyProgressServer) error
 	mustEmbedUnimplementedFilseServiseServer()
 }
 
@@ -93,6 +162,12 @@ func (UnimplementedFilseServiseServer) ListFiles(context.Context, *ListFilesRequ
 }
 func (UnimplementedFilseServiseServer) Download(*DownloadRequest, FilseServise_DownloadServer) error {
 	return status.Errorf(codes.Unimplemented, "method Download not implemented")
+}
+func (UnimplementedFilseServiseServer) Upload(FilseServise_UploadServer) error {
+	return status.Errorf(codes.Unimplemented, "method Upload not implemented")
+}
+func (UnimplementedFilseServiseServer) UploadAndNotifyProgress(FilseServise_UploadAndNotifyProgressServer) error {
+	return status.Errorf(codes.Unimplemented, "method UploadAndNotifyProgress not implemented")
 }
 func (UnimplementedFilseServiseServer) mustEmbedUnimplementedFilseServiseServer() {}
 
@@ -146,6 +221,58 @@ func (x *filseServiseDownloadServer) Send(m *DownloadResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _FilseServise_Upload_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(FilseServiseServer).Upload(&filseServiseUploadServer{stream})
+}
+
+type FilseServise_UploadServer interface {
+	SendAndClose(*UploadResponse) error
+	Recv() (*UploadRequest, error)
+	grpc.ServerStream
+}
+
+type filseServiseUploadServer struct {
+	grpc.ServerStream
+}
+
+func (x *filseServiseUploadServer) SendAndClose(m *UploadResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *filseServiseUploadServer) Recv() (*UploadRequest, error) {
+	m := new(UploadRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _FilseServise_UploadAndNotifyProgress_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(FilseServiseServer).UploadAndNotifyProgress(&filseServiseUploadAndNotifyProgressServer{stream})
+}
+
+type FilseServise_UploadAndNotifyProgressServer interface {
+	Send(*UploadAndNotifyProgressResponse) error
+	Recv() (*UploadAndNotifyProgressRequest, error)
+	grpc.ServerStream
+}
+
+type filseServiseUploadAndNotifyProgressServer struct {
+	grpc.ServerStream
+}
+
+func (x *filseServiseUploadAndNotifyProgressServer) Send(m *UploadAndNotifyProgressResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *filseServiseUploadAndNotifyProgressServer) Recv() (*UploadAndNotifyProgressRequest, error) {
+	m := new(UploadAndNotifyProgressRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // FilseServise_ServiceDesc is the grpc.ServiceDesc for FilseServise service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -163,6 +290,17 @@ var FilseServise_ServiceDesc = grpc.ServiceDesc{
 			StreamName:    "Download",
 			Handler:       _FilseServise_Download_Handler,
 			ServerStreams: true,
+		},
+		{
+			StreamName:    "Upload",
+			Handler:       _FilseServise_Upload_Handler,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "UploadAndNotifyProgress",
+			Handler:       _FilseServise_UploadAndNotifyProgress_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "proto/file.proto",

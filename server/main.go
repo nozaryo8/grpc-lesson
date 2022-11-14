@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"grpc-lesson/pb"
@@ -71,6 +72,56 @@ func (*server) Download(req *pb.DownloadRequest, stream pb.FilseServise_Download
 	return nil
 
 }
+
+func (*server) Upload(stream pb.FilseServise_UploadServer) error {
+	fmt.Println("Upload was invoked")
+
+	var buf bytes.Buffer
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			res := &pb.UploadResponse{Size: int32(buf.Len())}
+			return stream.SendAndClose(res)
+		}
+		if err != nil {
+			return err
+		}
+
+		data := req.GetData()
+		log.Printf("received data(bytes): %v", data)
+		log.Printf("received data(string): %v", string(data))
+		buf.Write(data)
+	}
+}
+
+//双方向ストリーミング
+func (*server) UploadAndNotifyProgress(stream pb.FilseServise_UploadAndNotifyProgressServer) error {
+	fmt.Println("UploadAndNotifyProgress was invoked")
+
+	size := 0
+
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		data := req.GetData()
+		log.Printf("received data: %v", data)
+		size += len(data)
+
+		res := &pb.UploadAndNotifyProgressResponse{
+			Msg: fmt.Sprintf("received %v bytes", size),
+		}
+		err = stream.Send(res)
+		if err != nil {
+			return err
+		}
+	}
+}
+
 func main() {
 	lis, err := net.Listen("tcp", "localhost:50051")
 	if err != nil {
